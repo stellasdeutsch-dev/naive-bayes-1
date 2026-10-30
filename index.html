@@ -251,10 +251,10 @@ details .a{margin-top:8px;font-size:14.5px;color:#454c56;display:flex;flex-direc
     <h2>why you will understand it</h2>
     <p class="sub">five small tools first. every one has a tiny example and a “try it”.</p>
     <div class="nums">
-      <div class="num"><b>1</b><div><h3>a classifier answers p(class | features)</h3><p>The class c is toxic (T) or friendly (F). The features are a vector <span class="m">x = (x₁, …, x<sub>D</sub>)</span>: here x<sub>j</sub> = 1 if word j is in the message, else 0. D = 4 words: ez, noob, gg, wp.</p><details><summary>try it: write x for “gg wp”</summary><div class="a"><p>(ez, noob, gg, wp) = (0, 0, 1, 1).</p></div></details></div></div>
+      <div class="num"><b>1</b><div><h3>a classifier answers p(class | features)</h3><p>The class c is toxic (T) or friendly (F). The features are a vector <span class="m">x = (x₁, …, x<sub>D</sub>)</span>: here x<sub>j</sub> = 1 if word j is in the message, else 0. D = 4 words: ez, noob, gg, wp.</p><details><summary><span class="st">try it: write x for “gg wp”</span></summary><div class="a"><p>(ez, noob, gg, wp) = (0, 0, 1, 1).</p></div></details></div></div>
       <div class="num"><b>2</b><div><h3>Bayes' rule turns it around</h3><div class="frm">p(c | x) = p(x | c) · p(c) / p(x)</div><p>p(c) is the <b>class prior</b> (how common toxic is). p(x | c) is the <b>class-conditional</b>: how likely these words are in a toxic message. p(x) is the same for every class.</p></div></div>
       <div class="num"><b>3</b><div><h3>“generative” means: describe how each class produces data</h3><p>We model p(x | c) and p(c), then use Bayes' rule. (A <i>discriminative</i> model like logistic regression models p(c | x) directly; that comes on Day 14.)</p></div></div>
-      <div class="num"><b>4</b><div><h3>Bernoulli for one yes/no word</h3><div class="frm">p(x<sub>j</sub> | c) = θ<sub>jc</sub><sup>x<sub>j</sub></sup> (1 − θ<sub>jc</sub>)<sup>1 − x<sub>j</sub></sup></div><p>θ<sub>jc</sub> = chance that word j appears in a class-c message. Word there: factor θ<sub>jc</sub>. Word missing: factor 1 − θ<sub>jc</sub>.</p><details><summary>try it: θ = 0.75, word missing. factor?</summary><div class="a"><p>1 − 0.75 = 0.25.</p></div></details></div></div>
+      <div class="num"><b>4</b><div><h3>Bernoulli for one yes/no word</h3><div class="frm">p(x<sub>j</sub> | c) = θ<sub>jc</sub><sup>x<sub>j</sub></sup> (1 − θ<sub>jc</sub>)<sup>1 − x<sub>j</sub></sup></div><p>θ<sub>jc</sub> = chance that word j appears in a class-c message. Word there: factor θ<sub>jc</sub>. Word missing: factor 1 − θ<sub>jc</sub>.</p><details><summary><span class="st">try it: θ = 0.75, word missing. factor?</span></summary><div class="a"><p>1 − 0.75 = 0.25.</p></div></details></div></div>
       <div class="num" style="grid-column:1 / -1"><b>5</b><div><h3>“∝” and normalising</h3><p>If the two scores are s<sub>T</sub> and s<sub>F</sub>, then <span class="m">p(T | x) = s<sub>T</sub> / (s<sub>T</sub> + s<sub>F</sub>)</span>. Dividing by the sum is the same as dividing by p(x). To just <i>pick</i> a class, compare the scores; no division needed.</p></div></div>
     </div>
     <p class="remember"><b>remember it:</b> classify with Bayes' rule: p(c | x) ∝ p(c) · p(x | c). The whole lecture is about making p(x | c) easy.</p>
@@ -394,11 +394,11 @@ details .a{margin-top:8px;font-size:14.5px;color:#454c56;display:flex;flex-direc
     <div class="faqgrid">
       <div class="polaroid" aria-hidden="true"><div class="img">p(c|x)</div><span class="cap">explain it back</span></div>
       <div class="faq">
-        <details><summary>what does “naive” mean in naive Bayes?</summary><div class="a"><p>The features are assumed independent given the class, so p(x | c) = Π p(x<sub>j</sub> | c).</p></div></details>
-        <details><summary>why is it called a generative classifier?</summary><div class="a"><p>It models how each class generates the data, p(x | c) and p(c), and then uses Bayes' rule to get p(c | x).</p></div></details>
-        <details><summary>how do you fit a Bernoulli naive Bayes?</summary><div class="a"><p>Count: π̂<sub>c</sub> = N<sub>c</sub>/N and θ̂<sub>jc</sub> = N<sub>jc</sub>/N<sub>c</sub>. These are the MLEs.</p></div></details>
-        <details><summary>how do you classify a new message?</summary><div class="a"><p>For each class multiply π<sub>c</sub> by θ<sub>jc</sub> for present words and 1 − θ<sub>jc</sub> for missing words; pick the largest; divide by the sum for probabilities.</p></div></details>
-        <details><summary>why use logs, and when do you need log-sum-exp?</summary><div class="a"><p>Products of many small numbers underflow. Logs turn them into sums. Log-sum-exp is only needed for normalised probabilities; for the arg max, compare log scores directly.</p></div></details>
+        <details><summary><span class="st">what does “naive” mean in naive Bayes?</span></summary><div class="a"><p>The features are assumed independent given the class, so p(x | c) = Π p(x<sub>j</sub> | c).</p></div></details>
+        <details><summary><span class="st">why is it called a generative classifier?</span></summary><div class="a"><p>It models how each class generates the data, p(x | c) and p(c), and then uses Bayes' rule to get p(c | x).</p></div></details>
+        <details><summary><span class="st">how do you fit a Bernoulli naive Bayes?</span></summary><div class="a"><p>Count: π̂<sub>c</sub> = N<sub>c</sub>/N and θ̂<sub>jc</sub> = N<sub>jc</sub>/N<sub>c</sub>. These are the MLEs.</p></div></details>
+        <details><summary><span class="st">how do you classify a new message?</span></summary><div class="a"><p>For each class multiply π<sub>c</sub> by θ<sub>jc</sub> for present words and 1 − θ<sub>jc</sub> for missing words; pick the largest; divide by the sum for probabilities.</p></div></details>
+        <details><summary><span class="st">why use logs, and when do you need log-sum-exp?</span></summary><div class="a"><p>Products of many small numbers underflow. Logs turn them into sums. Log-sum-exp is only needed for normalised probabilities; for the arg max, compare log scores directly.</p></div></details>
       </div>
     </div>
   </section>
@@ -409,23 +409,23 @@ details .a{margin-top:8px;font-size:14.5px;color:#454c56;display:flex;flex-direc
     <p class="sub">paper first, then hint, then solution</p>
     <div class="probs">
       <article class="prob"><div class="ptop"><span class="pn">01</span><span class="lvl l1">easy</span></div><h3>parameters to count</h3><p>A Bernoulli NBC with D = 20 words and C = 3 classes. How many parameters does it have? How many would a full model of p(x | c) need?</p>
-        <details><summary>hint</summary><div class="a"><p>NBC: one θ per word and class, plus the class prior. Full: a probability for every vector in {0,1}<sup>D</sup>.</p></div></details>
-        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>NBC: C·D = 60 values θ<sub>jc</sub>, plus C − 1 = 2 for π: 62</li><li>Full: C(2<sup>D</sup> − 1) = 3 · 1 048 575 ≈ 3.1 million (Week 6, Q1)</li></ul></div></details></article>
+        <details><summary><span class="st">hint</span></summary><div class="a"><p>NBC: one θ per word and class, plus the class prior. Full: a probability for every vector in {0,1}<sup>D</sup>.</p></div></details>
+        <details><summary><span class="st">solution</span></summary><div class="a"><ul class="steps-l"><li>NBC: C·D = 60 values θ<sub>jc</sub>, plus C − 1 = 2 for π: 62</li><li>Full: C(2<sup>D</sup> − 1) = 3 · 1 048 575 ≈ 3.1 million (Week 6, Q1)</li></ul></div></details></article>
       <article class="prob"><div class="ptop"><span class="pn">02</span><span class="lvl l1">easy</span></div><h3>fit by counting</h3><p>Add two new messages to our data: “noob” (toxic) and “gg” (friendly). Recompute π̂ and θ̂ for the word noob in both classes.</p>
-        <details><summary>hint</summary><div class="a"><p>N<sub>T</sub> = 5, N<sub>F</sub> = 7, N = 12.</p></div></details>
-        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>π̂<sub>T</sub> = 5/12, π̂<sub>F</sub> = 7/12</li><li>θ̂<sub>noob,T</sub> = 4/5 = 0.8; θ̂<sub>noob,F</sub> = 0/7 = 0</li></ul></div></details></article>
+        <details><summary><span class="st">hint</span></summary><div class="a"><p>N<sub>T</sub> = 5, N<sub>F</sub> = 7, N = 12.</p></div></details>
+        <details><summary><span class="st">solution</span></summary><div class="a"><ul class="steps-l"><li>π̂<sub>T</sub> = 5/12, π̂<sub>F</sub> = 7/12</li><li>θ̂<sub>noob,T</sub> = 4/5 = 0.8; θ̂<sub>noob,F</sub> = 0/7 = 0</li></ul></div></details></article>
       <article class="prob"><div class="ptop"><span class="pn">03</span><span class="lvl l2">medium</span></div><h3>classify “ez noob gg”</h3><p>Using the table from this lecture, compute both scores and p(toxic | x) for x = (1, 1, 1, 0).</p>
-        <details><summary>hint</summary><div class="a"><p>Friendly has θ<sub>noob</sub> = 0.</p></div></details>
-        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>T: 0.4 · 0.75 · 0.75 · 0.5 · 1 = 0.1125</li><li>F: 0.6 · (1/6) · 0 · … = 0</li><li>p(T | x) = 1: certain only because of a zero count</li></ul></div></details></article>
+        <details><summary><span class="st">hint</span></summary><div class="a"><p>Friendly has θ<sub>noob</sub> = 0.</p></div></details>
+        <details><summary><span class="st">solution</span></summary><div class="a"><ul class="steps-l"><li>T: 0.4 · 0.75 · 0.75 · 0.5 · 1 = 0.1125</li><li>F: 0.6 · (1/6) · 0 · … = 0</li><li>p(T | x) = 1: certain only because of a zero count</li></ul></div></details></article>
       <article class="prob"><div class="ptop"><span class="pn">04</span><span class="lvl l2">medium</span></div><h3>prior beats evidence</h3><p>Two classes, π<sub>T</sub> = 0.1, π<sub>F</sub> = 0.9. One word: θ<sub>T</sub> = 0.5, θ<sub>F</sub> = 0.125. The word appears. Which class wins? (Week 5, Q2 idea)</p>
-        <details><summary>hint</summary><div class="a"><p>Compare 0.1 · 0.5 with 0.9 · 0.125.</p></div></details>
-        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>T: 0.05; F: 0.1125</li><li>p(T | x) = 0.05/0.1625 ≈ 0.31 → friendly, although the word is 4× more common in toxic chat</li></ul></div></details></article>
+        <details><summary><span class="st">hint</span></summary><div class="a"><p>Compare 0.1 · 0.5 with 0.9 · 0.125.</p></div></details>
+        <details><summary><span class="st">solution</span></summary><div class="a"><ul class="steps-l"><li>T: 0.05; F: 0.1125</li><li>p(T | x) = 0.05/0.1625 ≈ 0.31 → friendly, although the word is 4× more common in toxic chat</li></ul></div></details></article>
       <article class="prob"><div class="ptop"><span class="pn">05</span><span class="lvl l3">exam-style</span></div><h3>pass or fail, the original numbers</h3><p>D = {(F,1,1), (F,0,0), (P,1,1), (P,1,0), (F,0,1), (F,1,0), (P,1,1)} with features (attended, homework). Fit the MLE NBC and classify (1, 1).</p>
-        <details><summary>hint</summary><div class="a"><p>Same numbers as the Dota exam box, with P = W.</p></div></details>
-        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>π̂<sub>P</sub> = 3/7, θ̂<sub>att,P</sub> = 1, θ̂<sub>hw,P</sub> = 2/3; π̂<sub>F</sub> = 4/7, θ̂<sub>att,F</sub> = θ̂<sub>hw,F</sub> = 1/2</li><li>P: 3/7 · 1 · 2/3 = 2/7 ≈ 0.286; F: 4/7 · 1/2 · 1/2 = 1/7 ≈ 0.143</li><li>p(P | x) = 2/3 → pass</li></ul></div></details></article>
+        <details><summary><span class="st">hint</span></summary><div class="a"><p>Same numbers as the Dota exam box, with P = W.</p></div></details>
+        <details><summary><span class="st">solution</span></summary><div class="a"><ul class="steps-l"><li>π̂<sub>P</sub> = 3/7, θ̂<sub>att,P</sub> = 1, θ̂<sub>hw,P</sub> = 2/3; π̂<sub>F</sub> = 4/7, θ̂<sub>att,F</sub> = θ̂<sub>hw,F</sub> = 1/2</li><li>P: 3/7 · 1 · 2/3 = 2/7 ≈ 0.286; F: 4/7 · 1/2 · 1/2 = 1/7 ≈ 0.143</li><li>p(P | x) = 2/3 → pass</li></ul></div></details></article>
       <article class="prob"><div class="ptop"><span class="pn">06</span><span class="lvl l4">challenge</span></div><h3>log-sum-exp by hand</h3><p>Log scores b<sub>T</sub> = −300, b<sub>F</sub> = −302. Compute log p(T | x) and p(T | x) without underflow.</p>
-        <details><summary>hint</summary><div class="a"><p>B = −300.</p></div></details>
-        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>log Σ = −300 + log(1 + e<sup>−2</sup>) = −300 + log 1.1353 ≈ −299.873</li><li>log p(T | x) = −300 − (−299.873) ≈ −0.127 → p ≈ 0.88</li></ul></div></details></article>
+        <details><summary><span class="st">hint</span></summary><div class="a"><p>B = −300.</p></div></details>
+        <details><summary><span class="st">solution</span></summary><div class="a"><ul class="steps-l"><li>log Σ = −300 + log(1 + e<sup>−2</sup>) = −300 + log 1.1353 ≈ −299.873</li><li>log p(T | x) = −300 − (−299.873) ≈ −0.127 → p ≈ 0.88</li></ul></div></details></article>
     </div>
   </section>
 
