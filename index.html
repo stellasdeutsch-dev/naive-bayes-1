@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Naive Bayes, Part 1</title>
+<meta name="description" content="Lecture 5 of Statistical Learning: the naive Bayes classifier from zero — the naive assumption, fitting by counting, predicting, and the log-sum-exp trick — with Dota 2 all-chat examples.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,500;1,500&display=swap">
+<style>
+/* Layout: online-course landing — the whole page sits inside a sky-blue frame; stacked white panels; neon-green pills; chat-sticker decorations; lowercase bold headings. Single committed light look. */
+:root{
+  color-scheme:light;
+  --sky:#5ab6f5; --sky-2:#9bd3fb; --sky-pale:#e9f5fe;
+  --neon:#4fe36f; --neon-2:#2fc957; --neon-pale:#e3fbe8;
+  --ink:#1e2227; --muted:#6c737e; --card:#f3f4f6; --line:#e4e7eb; --white:#ffffff;
+  --red:#ef5350; --red-pale:#fde8e8;
+  --sans:"Onest", "Helvetica Neue", Arial, sans-serif;
+  --math:"STIX Two Text", "Times New Roman", serif;
+  --r-xl:26px; --r-l:18px; --r-m:12px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:#f4f8fb;color:var(--ink);font:400 16px/1.6 var(--sans);padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));padding-block:12px 36px}
+[hidden]{display:none!important}
+p{margin:0}
+a{color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance;font-weight:800;letter-spacing:-.03em;line-height:1.08}
+h2{font-size:clamp(26px,3.6vw,40px);text-transform:lowercase}
+h3{font-size:18px;letter-spacing:-.015em;line-height:1.25}
+.m{font-family:var(--math);font-style:italic;font-size:1.07em}
+.frame{max-width:1180px;margin:0 auto;background:var(--sky);border-radius:var(--r-xl);padding:12px;display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--white);border-radius:22px;padding-block:clamp(28px,4.5vw,56px);padding-inline:clamp(16px,4.5vw,60px);display:flex;flex-direction:column;gap:22px;position:relative;overflow:hidden}
+.center{align-items:center;text-align:center}
+.sub{color:var(--muted);max-width:60ch}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:99px;padding:12px 22px;font:700 14px var(--sans);text-transform:lowercase;text-decoration:none;cursor:pointer;background:var(--neon);color:#0f3a1b}
+.btn:hover{background:var(--neon-2)}
+.btn:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #1d6fd1;outline-offset:2px}
+.pill{display:inline-flex;align-items:center;border:1.5px solid var(--sky);color:#1b7fd0;border-radius:99px;padding:4px 12px;font-size:13px;font-weight:600}
+.remember{background:var(--neon-pale);border-radius:var(--r-m);padding:14px 18px;font-size:15.5px}
+.remember b{color:#1c7f37}
+.squig{position:absolute;pointer-events:none;width:clamp(120px,18vw,220px);height:auto}
+
+/* nav */
+.nav{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 8px 4px 10px;color:#fff}
+.logo{font:800 22px var(--sans);letter-spacing:-.04em;text-decoration:none;color:#fff}
+.logo span{color:var(--neon)}
+.links{display:flex;gap:24px;font-size:14px;font-weight:600;text-transform:lowercase}
+.links a{text-decoration:none;color:#fff}
+
+/* hero */
+.hero h1{font-size:clamp(34px,6vw,66px);text-transform:lowercase;max-width:15ch;margin:0 auto}
+.stickers{position:relative;height:0}
+.stk{position:absolute;display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:16px;padding:8px 12px;box-shadow:0 10px 24px rgba(30,60,100,.14);font-weight:700;font-size:15px;white-space:nowrap}
+.stk .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800}
+.stk.t{color:var(--red)}
+.stk.f{color:#1c9a42}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:700}
+.badge.t{background:var(--red-pale);color:#c62828}
+.badge.f{background:var(--neon-pale);color:#1c7f37}
+.heroinner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding-block:clamp(30px,6vw,70px) 0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:640px}
+.form input{flex:1 1 260px;min-width:0;border:1.5px solid var(--line);border-radius:99px;padding:12px 18px;font:500 15px var(--sans);color:var(--ink);background:#fff}
+.result{font-size:15px;min-height:48px;max-width:640px}
+.result b.t{color:#c62828}.result b.f{color:#1c7f37}
+.tiny{font-size:12.5px;color:var(--muted)}
+
+/* how it goes */
+.cards4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%;text-align:left}
+.c4{background:var(--card);border-radius:var(--r-l);padding:18px;display:flex;flex-direction:column;gap:8px}
+.c4 .ic{font-size:26px;line-height:1}
+.c4 b{font-size:17px;letter-spacing:-.015em}
+.c4 span{font-size:14px;color:var(--muted)}
+
+/* for you if */
+.collage{position:relative;width:min(560px,100%);aspect-ratio:1.5;margin:0 auto;border-radius:16px;background:linear-gradient(140deg,#c8f7d2 0%,#9fdcfd 50%,#ffd6a5 100%);display:grid;place-items:center}
+.collage .big{font:800 clamp(40px,8vw,84px) var(--sans);letter-spacing:-.05em;color:#fff;text-shadow:0 4px 20px rgba(0,0,0,.1)}
+.bub{position:absolute;background:#fff;border-radius:14px;padding:10px 14px;font-size:13.5px;font-weight:600;box-shadow:0 10px 24px rgba(30,60,100,.12);max-width:220px;text-align:left;line-height:1.35}
+
+/* numbered list (toolbox) */
+.nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;text-align:left}
+.num{background:var(--card);border-radius:var(--r-l);padding:18px;display:flex;gap:14px;align-items:flex-start}
+.num > b{font:800 30px var(--sans);color:var(--sky);line-height:1;min-width:26px}
+.num > div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.num h3{font-size:16.5px}
+.num p{font-size:14.5px;color:#454c56}
+.frm{display:block;font-family:var(--math);font-style:italic;font-size:clamp(16px,1.9vw,20px);line-height:1.6;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:center;overflow-x:auto}
+.frm.big{font-size:clamp(20px,2.6vw,28px);background:var(--sky-pale);border-color:#cfe8fb}
+details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;font-size:14.5px;font-weight:600}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";flex-shrink:0;color:#1b7fd0;font-size:20px;line-height:1;font-weight:500}
+details[open] summary::after{content:"−"}
+details .a{margin-top:8px;font-size:14.5px;color:#454c56;display:flex;flex-direction:column;gap:6px}
+
+/* tutor */
+.tutor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:center;text-align:left}
+.tutor .txt{display:flex;flex-direction:column;gap:12px}
+.tutor .txt p{color:#454c56;font-size:15px}
+.call{border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#dfeaf3,#f7fbff);aspect-ratio:1.45;position:relative;display:grid;place-items:center;box-shadow:0 14px 34px rgba(30,60,100,.12)}
+.call .face{width:46%;aspect-ratio:1;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 8px 20px rgba(30,60,100,.1)}
+.call .face svg{width:70%}
+.call .name{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.35);color:#fff;font-size:12px;border-radius:6px;padding:3px 8px}
+.call .ctr{position:absolute;right:12px;bottom:12px;display:flex;gap:6px}
+.call .ctr i{width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.35);display:block}
+
+/* data reviews */
+.reviews{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;width:100%;text-align:left}
+.rev{background:var(--card);border-radius:var(--r-l);padding:14px;display:flex;flex-direction:column;gap:10px;justify-content:space-between;min-height:150px}
+.rev p{font-size:15px;font-weight:600}
+.rev .who{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.rev .who .av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800}
+.rev .q{margin-left:auto;font:800 26px var(--sans);color:var(--neon-2);line-height:.6}
+.rev .vec{font-family:var(--math);font-style:italic;font-size:14px;color:var(--muted)}
+
+/* derive + tables */
+.derive{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;text-align:left;width:100%}
+.drow{display:grid;grid-template-columns:96px minmax(0,1.2fr) minmax(0,1fr);gap:14px;padding:13px 18px;border-top:1px solid var(--line);align-items:baseline}
+.drow:first-child{border-top:0}
+.drow .k{font-size:12px;font-weight:700;color:#1b7fd0;text-transform:lowercase}
+.drow .eq{font-family:var(--math);font-style:italic;font-size:17.5px;overflow-x:auto;white-space:nowrap;padding-bottom:2px}
+.drow .why{font-size:14px;color:var(--muted)}
+.drow.ans{background:var(--neon-pale)}
+.drow.ans .eq{font-weight:600}
+.tablewrap{overflow-x:auto;min-width:0;width:100%;background:#fff;border:1px solid var(--line);border-radius:var(--r-l)}
+.table{width:100%;border-collapse:collapse;font-size:15px;min-width:560px;font-variant-numeric:tabular-nums;text-align:left}
+.table th{font-size:12.5px;color:var(--muted);padding:10px 12px;font-weight:700;text-transform:lowercase}
+.table td{padding:10px 12px;border-top:1px solid var(--line)}
+.table td.z{color:#c62828;font-weight:700}
+.twocol{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start;width:100%;text-align:left}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:66ch}
+.prose p{color:#454c56}
+.scorecard{background:var(--card);border-radius:var(--r-l);padding:18px;display:flex;flex-direction:column;gap:10px}
+.bar{height:12px;border-radius:99px;background:#fff;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar i.t{background:var(--red)}.bar i.f{background:var(--neon)}
+
+/* telegram-like */
+.tg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:center;text-align:left}
+.tg svg{width:100%;height:auto}
+
+/* faq */
+.faqgrid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:20px;align-items:start;width:100%;text-align:left}
+.faq{display:flex;flex-direction:column;gap:8px}
+.faq details{background:var(--card);border:0;padding:14px 16px}
+.polaroid{background:#fff;padding:12px 12px 40px;box-shadow:0 14px 30px rgba(0,0,0,.12);transform:rotate(-3deg);position:relative;max-width:420px}
+.polaroid .img{aspect-ratio:1.4;background:linear-gradient(150deg,#bfe6ff,#c9f7d3);display:grid;place-items:center;font:800 40px var(--sans);color:#fff}
+.polaroid .cap{position:absolute;bottom:10px;left:0;right:0;text-align:center;font:600 18px var(--sans);font-style:italic;color:#444}
+.polaroid::before{content:"";position:absolute;top:-12px;left:50%;width:110px;height:26px;transform:translateX(-50%) rotate(-4deg);background:rgba(120,230,90,.75)}
+
+/* practice */
+.probs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;text-align:left}
+.prob{background:var(--card);border-radius:var(--r-l);padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.prob p{font-size:15px;color:#454c56}
+.prob details{background:#fff}
+.ptop{display:flex;gap:8px;align-items:center}
+.pn{font:800 15px var(--sans);color:var(--sky)}
+.lvl{font-size:11.5px;font-weight:700;border-radius:99px;padding:3px 10px}
+.l1{background:var(--neon-pale);color:#1c7f37}.l2{background:var(--sky-pale);color:#1b7fd0}.l3{background:#fff1e0;color:#b45c10}.l4{background:#f1e6fb;color:#7a3ab0}
+.steps-l{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
+.traps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;text-align:left}
+.trap{background:var(--card);border-radius:var(--r-l);padding:16px;font-size:14.5px;color:#454c56;display:flex;flex-direction:column;gap:6px}
+.trap b{color:#c62828}
+
+/* footer */
+.foot{display:grid;grid-template-columns:1.2fr repeat(3,minmax(0,1fr));gap:18px;color:#fff;padding:18px 12px 8px;font-size:13.5px}
+.foot b{display:block;margin-bottom:8px;font-size:13px}
+.foot a{display:block;text-decoration:none;opacity:.95}
+.foot .who{display:flex;gap:10px;align-items:center}
+.foot .who i{width:46px;height:46px;border-radius:12px;background:#fff;display:grid;place-items:center;font-style:normal;font-size:24px}
+
+@media (max-width:980px){
+  .links{display:none}
+  .cards4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .reviews{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nums,.tutor,.twocol,.tg,.faqgrid,.probs,.traps{grid-template-columns:1fr}
+  .drow{grid-template-columns:1fr;gap:4px}
+  .drow .eq{white-space:normal}
+  .foot{grid-template-columns:1fr 1fr}
+  .stickers{display:none}
+}
+@media (max-width:520px){
+  .cards4,.reviews{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <nav class="nav" aria-label="Page">
+    <a class="logo" href="#top">naive<span>bayes</span></a>
+    <span class="links"><a href="#how">format</a><a href="#tools">toolbox</a><a href="#fit">fitting</a><a href="#predict">predicting</a><a href="#exam">exam</a><a href="#practice">practice</a></span>
+    <a class="btn" href="#try">try the classifier</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="panel" id="top">
+    <svg class="squig" style="right:-30px;top:-20px" viewBox="0 0 200 120" aria-hidden="true"><path d="M10 30 C60 -10 90 80 130 40 S190 10 190 80" fill="none" stroke="#4fe36f" stroke-width="18" stroke-linecap="round"/></svg>
+    <div class="stickers" aria-hidden="true">
+      <span class="stk t" style="left:4%;top:40px"><span class="av" style="background:#ef5350">T</span>ez noob</span>
+      <span class="stk f" style="right:6%;top:70px"><span class="av" style="background:#2fc957">F</span>gg wp</span>
+      <span class="stk" style="left:10%;top:230px"><span class="badge t">toxic</span><span class="badge f">friendly</span></span>
+      <span class="stk" style="right:10%;top:250px">P(toxic | message) = ?</span>
+    </div>
+    <div class="heroinner" id="try">
+      <span class="pill">statistical learning · lecture 5</span>
+      <h1>online lecture on the naive bayes classifier</h1>
+      <p class="sub">learn to sort all-chat messages into <b>toxic</b> and <b>friendly</b> with just counting and multiplying. from zero, step by step, in 90 minutes.</p>
+      <div class="chips"><span class="pill">free</span><span class="pill">part 1 of 2</span><span class="pill">dota 2 examples</span></div>
+      <form class="form" id="clsForm" autocomplete="off">
+        <label for="msg" class="tiny" style="flex-basis:100%">type a message using the words ez, noob, gg, wp</label>
+        <input id="msg" name="msg" value="ez gg" aria-describedby="res">
+        <button class="btn" type="submit">classify</button>
+      </form>
+      <p class="result" id="res" aria-live="polite"></p>
+      <p class="tiny">this mini classifier is trained on the 10 messages below and uses the simple counting rule from this lecture.</p>
+    </div>
+  </section>
+
+  <!-- HOW IT GOES -->
+  <section class="panel center" id="how">
+    <h2>how this lecture goes</h2>
+    <p class="sub">a simple path where you never need to guess</p>
+    <div class="cards4">
+      <div class="c4"><span class="ic">💬</span><b>1 · the task</b><span>a message comes in. is it toxic or friendly? that is classification.</span></div>
+      <div class="c4"><span class="ic">🧩</span><b>2 · the naive idea</b><span>pretend the words are independent once you know the class.</span></div>
+      <div class="c4"><span class="ic">🧮</span><b>3 · fit by counting</b><span>every probability is “how often ÷ how many”.</span></div>
+      <div class="c4"><span class="ic">🎯</span><b>4 · predict</b><span>multiply, compare the classes, normalise. plus the log trick.</span></div>
+    </div>
+  </section>
+
+  <!-- FOR YOU IF -->
+  <section class="panel center">
+    <svg class="squig" style="left:-40px;bottom:-10px" viewBox="0 0 200 120" aria-hidden="true"><path d="M10 90 C40 10 80 110 110 50 S170 20 190 90" fill="none" stroke="#4fe36f" stroke-width="18" stroke-linecap="round"/></svg>
+    <h2>this lecture is for you if…</h2>
+    <div class="collage" aria-label="Situations this lecture helps with">
+      <span class="big">P(c | x)</span>
+      <span class="bub" style="left:-4%;top:14%">you know Bayes' rule but never used it to classify</span>
+      <span class="bub" style="right:-4%;top:6%">“generative classifier” sounds scary</span>
+      <span class="bub" style="left:6%;bottom:-6%">the exam has a Naive Bayes table every year</span>
+      <span class="bub" style="right:-2%;bottom:6%">you want to compute it by hand, fast</span>
+    </div>
+  </section>
+
+  <!-- TOOLBOX -->
+  <section class="panel center" id="tools">
+    <h2>why you will understand it</h2>
+    <p class="sub">five small tools first. every one has a tiny example and a “try it”.</p>
+    <div class="nums">
+      <div class="num"><b>1</b><div><h3>a classifier answers p(class | features)</h3><p>The class c is toxic (T) or friendly (F). The features are a vector <span class="m">x = (x₁, …, x_D)</span>: here x_j = 1 if word j is in the message, else 0. D = 4 words: ez, noob, gg, wp.</p><details><summary>try it: write x for “gg wp”</summary><div class="a"><p>(ez, noob, gg, wp) = (0, 0, 1, 1).</p></div></details></div></div>
+      <div class="num"><b>2</b><div><h3>Bayes' rule turns it around</h3><div class="frm">p(c | x) = p(x | c) · p(c) / p(x)</div><p>p(c) is the <b>class prior</b> (how common toxic is). p(x | c) is the <b>class-conditional</b>: how likely these words are in a toxic message. p(x) is the same for every class.</p></div></div>
+      <div class="num"><b>3</b><div><h3>“generative” means: describe how each class produces data</h3><p>We model p(x | c) and p(c), then use Bayes' rule. (A <i>discriminative</i> model like logistic regression models p(c | x) directly; that comes on Day 14.)</p></div></div>
+      <div class="num"><b>4</b><div><h3>Bernoulli for one yes/no word</h3><div class="frm">p(x_j | c) = θ_jc<sup>x_j</sup> (1 − θ_jc)<sup>1 − x_j</sup></div><p>θ_jc = chance that word j appears in a class-c message. Word there: factor θ_jc. Word missing: factor 1 − θ_jc.</p><details><summary>try it: θ = 0.75, word missing. factor?</summary><div class="a"><p>1 − 0.75 = 0.25.</p></div></details></div></div>
+      <div class="num" style="grid-column:1 / -1"><b>5</b><div><h3>“∝” and normalising</h3><p>If the two scores are s_T and s_F, then <span class="m">p(T | x) = s_T / (s_T + s_F)</span>. Dividing by the sum is the same as dividing by p(x). To just <i>pick</i> a class, compare the scores; no division needed.</p></div></div>
+    </div>
+    <p class="remember"><b>remember it:</b> classify with Bayes' rule: p(c | x) ∝ p(c) · p(x | c). The whole lecture is about making p(x | c) easy.</p>
+  </section>
+
+  <!-- TUTOR / NAIVE IDEA -->
+  <section class="panel">
+    <div class="tutor">
+      <div class="txt">
+        <h2>the naive idea: words are independent given the class</h2>
+        <p>p(x | c) is a probability for a whole <b>vector</b> of words. With D words there are 2<sup>D</sup> possible vectors; with 600 words that is more than the number of atoms in the universe. You can't count all of them.</p>
+        <p>The naive Bayes assumption: <b>once you know the class, the words don't influence each other</b>. Then p(x | c) splits into one small factor per word:</p>
+        <div class="frm big">p(x | c) = Π<sub>j</sub> p(x_j | c)</div>
+        <p>It is called “naive” because it is usually not exactly true (in toxic chat, “ez” and “noob” come together). It still works surprisingly well, and it needs only D numbers per class instead of 2<sup>D</sup> − 1.</p>
+        <a class="btn" href="#fit" style="align-self:flex-start">see it on data</a>
+      </div>
+      <div class="call" aria-hidden="true">
+        <div class="face"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#5ab6f5"/><circle cx="36" cy="44" r="6" fill="#fff"/><circle cx="64" cy="44" r="6" fill="#fff"/><path d="M34 64 Q50 76 66 64" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+        <span class="name">your study buddy</span><span class="ctr"><i></i><i></i><i></i></span>
+      </div>
+    </div>
+    <p class="remember"><b>remember it:</b> naive = “independent given the class” → p(x | c) = product over words.</p>
+  </section>
+
+  <!-- DATA -->
+  <section class="panel center" id="data">
+    <h2>our training data: 10 all-chat messages</h2>
+    <p class="sub">each message is labelled by hand. the vector shows (ez, noob, gg, wp).</p>
+    <div class="reviews" id="reviews"></div>
+  </section>
+
+  <!-- FIT -->
+  <section class="panel" id="fit">
+    <h2>fitting = counting</h2>
+    <div class="twocol">
+      <div class="prose">
+        <p><b>What we need:</b> the class priors π_c and, for every word j and class c, θ_jc. The MLE (maximum likelihood) answer is simply a share:</p>
+        <div class="frm big">π̂_c = N_c / N &nbsp;&nbsp;&nbsp; θ̂_jc = N_jc / N_c</div>
+        <p>N_c = messages in class c. N_jc = messages in class c that contain word j. In words: “how many toxic messages contain ez, out of all toxic messages”.</p>
+      </div>
+      <div class="derive">
+        <div class="drow"><span class="k">one message</span><span class="eq">p(xᵢ, cᵢ) = π<sub>cᵢ</sub> Π<sub>j</sub> θ<sub>j,cᵢ</sub><sup>xᵢⱼ</sup>(1 − θ<sub>j,cᵢ</sub>)<sup>1−xᵢⱼ</sup></span><span class="why">class prior × naive product</span></div>
+        <div class="drow"><span class="k">all data</span><span class="eq">log p(D) = Σ<sub>c</sub> N_c log π_c + Σ<sub>c</sub> Σ<sub>j</sub> [N_jc log θ_jc + (N_c − N_jc) log(1 − θ_jc)]</span><span class="why">log of a product = sum; group by class and word</span></div>
+        <div class="drow"><span class="k">each θ alone</span><span class="eq">N_jc/θ − (N_c − N_jc)/(1 − θ) = 0</span><span class="why">exactly the Mirana hit-rate derivative (Lecture 2)</span></div>
+        <div class="drow ans"><span class="k">solve</span><span class="eq">θ̂_jc = N_jc / N_c, &nbsp; π̂_c = N_c / N</span><span class="why">π is a Categorical MLE (counts ÷ total)</span></div>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table class="table">
+        <thead><tr><th>class</th><th>π̂ = N_c/N</th><th>θ̂ ez</th><th>θ̂ noob</th><th>θ̂ gg</th><th>θ̂ wp</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge t">toxic</span> N_T = 4</td><td>4/10 = 0.4</td><td>3/4 = 0.75</td><td>3/4 = 0.75</td><td>2/4 = 0.5</td><td class="z">0/4 = 0</td></tr>
+          <tr><td><span class="badge f">friendly</span> N_F = 6</td><td>6/10 = 0.6</td><td>1/6 ≈ 0.17</td><td class="z">0/6 = 0</td><td>5/6 ≈ 0.83</td><td>5/6 ≈ 0.83</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="remember"><b>remember it:</b> π̂_c = N_c/N and θ̂_jc = N_jc/N_c. Fitting naive Bayes takes one pass over the data: O(N·D).</p>
+  </section>
+
+  <!-- PREDICT -->
+  <section class="panel" id="predict">
+    <h2>predicting, step by step</h2>
+    <div class="frm big">p(c | x) ∝ π_c · Π<sub>j</sub> θ_jc<sup>x_j</sup> (1 − θ_jc)<sup>1 − x_j</sup></div>
+    <div class="twocol">
+      <div class="derive">
+        <div class="drow"><span class="k">message</span><span class="eq">“ez gg” → x = (1, 0, 1, 0)</span><span class="why">ez yes, noob no, gg yes, wp no</span></div>
+        <div class="drow"><span class="k">toxic score</span><span class="eq">0.4 · 0.75 · (1 − 0.75) · 0.5 · (1 − 0) = 0.0375</span><span class="why">θ for present words, 1 − θ for missing</span></div>
+        <div class="drow"><span class="k">friendly score</span><span class="eq">0.6 · (1/6) · (1 − 0) · (5/6) · (1 − 5/6) ≈ 0.0139</span><span class="why">same recipe with friendly θ's</span></div>
+        <div class="drow ans"><span class="k">normalise</span><span class="eq">p(T | x) = 0.0375 / (0.0375 + 0.0139) ≈ 0.73</span><span class="why">73% toxic → predict toxic</span></div>
+      </div>
+      <div class="scorecard">
+        <h3>three messages, three lessons</h3>
+        <p class="tiny" style="font-size:14px"><b>“ez gg”</b>: 73% toxic. A normal case.</p>
+        <div class="bar" aria-label="73 percent toxic"><i class="t" style="width:73%"></i><i class="f" style="width:27%"></i></div>
+        <p class="tiny" style="font-size:14px"><b>“gg wp”</b>: toxic score = 0.4 · … · θ_wp,T = 0 because no toxic message ever had wp. Result: 100% friendly, overconfident.</p>
+        <div class="bar" aria-label="100 percent friendly"><i class="f" style="width:100%"></i></div>
+        <p class="tiny" style="font-size:14px"><b>“noob wp”</b>: toxic score 0 (wp), friendly score 0 (noob). <b>0/0: the classifier crashes.</b> Fixing this is part 2.</p>
+        <div class="bar" aria-label="undefined"></div>
+      </div>
+    </div>
+    <p class="remember"><b>remember it:</b> score each class = prior × product of word factors; pick the biggest; divide by the sum for probabilities. A single zero θ kills a class.</p>
+  </section>
+
+  <!-- LOG SUM EXP -->
+  <section class="panel">
+    <div class="tg">
+      <div class="prose">
+        <h2>the log-sum-exp trick</h2>
+        <p>With 600 words you multiply 600 numbers below 1. The product is like 10<sup>−200</sup>, and a computer rounds it to 0 (<b>underflow</b>). Fix: work with logs. Let</p>
+        <div class="frm">b_c = log p(x | c) + log p(c)</div>
+        <p>To <b>pick</b> a class, take the biggest b_c. Done, no trick needed. To get <b>probabilities</b> you need log Σ e<sup>b_c</sup>, and e<sup>−120</sup> already underflows. Pull out the biggest term B = max b_c:</p>
+        <div class="frm big">log Σ<sub>c</sub> e<sup>b_c</sup> = B + log Σ<sub>c</sub> e<sup>b_c − B</sup></div>
+        <p>Example: log(e<sup>−120</sup> + e<sup>−121</sup>) = −120 + log(e⁰ + e<sup>−1</sup>) = −120 + log 1.368 ≈ −119.69. Every number stays readable. Then <span class="m">log p(c | x) = b_c − log Σ e<sup>b_c′</sup></span>.</p>
+      </div>
+      <svg viewBox="0 0 420 300" aria-hidden="true">
+        <path d="M0 230 C80 160 120 280 200 200 S330 120 420 170" fill="none" stroke="#4fe36f" stroke-width="22" stroke-linecap="round"/>
+        <circle cx="230" cy="130" r="70" fill="#4a9ff0"/><path d="M200 132 L265 105 L245 165 L232 140 Z" fill="#fff"/>
+        <rect x="300" y="40" width="80" height="54" rx="12" fill="#fff" stroke="#e4e7eb" stroke-width="2"/><text x="340" y="74" text-anchor="middle" font-family="Onest" font-weight="800" font-size="18" fill="#5ab6f5">log</text>
+        <rect x="70" y="60" width="96" height="54" rx="12" fill="#fff" stroke="#e4e7eb" stroke-width="2"/><text x="118" y="94" text-anchor="middle" font-family="Onest" font-weight="800" font-size="16" fill="#ef5350">10⁻²⁰⁰</text>
+      </svg>
+    </div>
+    <p class="remember"><b>remember it:</b> to classify, compare log scores; for probabilities, subtract the max before exponentiating.</p>
+  </section>
+
+  <!-- EXAM -->
+  <section class="panel" id="exam">
+    <h2>the exam task (2025 final, task 5), dota version</h2>
+    <div class="twocol">
+      <div class="prose">
+        <p>The exam had 7 students: pass/fail from (attendance, homework). Here are the same numbers as 7 games: result (W/L) from x₁ = “got first blood”, x₂ = “won mid lane”:</p>
+        <div class="frm">(L,1,1), (L,0,0), (W,1,1), (W,1,0), (L,0,1), (L,1,0), (W,1,1)</div>
+        <p><b>(a)</b> Write the NBC and fit the MLEs. <b>(b)</b> Classify (0, 1).</p>
+        <p class="tiny" style="font-size:14px">Task 5(c), “advantages of the Bayesian approach”, is in part 2.</p>
+      </div>
+      <div class="derive">
+        <div class="drow"><span class="k">model</span><span class="eq">p(c | x) ∝ π_c θ<sub>1c</sub><sup>x₁</sup>(1−θ<sub>1c</sub>)<sup>1−x₁</sup> θ<sub>2c</sub><sup>x₂</sup>(1−θ<sub>2c</sub>)<sup>1−x₂</sup></span><span class="why">two Bernoulli features</span></div>
+        <div class="drow"><span class="k">priors</span><span class="eq">π̂_W = 3/7, π̂_L = 4/7</span><span class="why">3 wins, 4 losses</span></div>
+        <div class="drow"><span class="k">wins</span><span class="eq">θ̂<sub>FB,W</sub> = 3/3 = 1, θ̂<sub>mid,W</sub> = 2/3</span><span class="why">rows (1,1), (1,0), (1,1)</span></div>
+        <div class="drow"><span class="k">losses</span><span class="eq">θ̂<sub>FB,L</sub> = 2/4, θ̂<sub>mid,L</sub> = 2/4</span><span class="why">rows (1,1), (0,0), (0,1), (1,0)</span></div>
+        <div class="drow"><span class="k">x = (0, 1)</span><span class="eq">W: 3/7 · (1 − 1) · 2/3 = 0; &nbsp; L: 4/7 · 1/2 · 1/2 = 1/7</span><span class="why">no first blood kills W completely</span></div>
+        <div class="drow ans"><span class="k">answer</span><span class="eq">predict L with probability 1</span><span class="why">a 100% answer from 7 games: suspicious (part 2)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAPS + EXPLAIN BACK -->
+  <section class="panel">
+    <h2>learn it by heart</h2>
+    <div class="traps">
+      <div class="trap"><b>trap 1 · forgetting missing words</b><span>A word that is NOT in the message still counts, with factor 1 − θ_jc (Bernoulli model).</span></div>
+      <div class="trap"><b>trap 2 · forgetting the prior</b><span>Multiply by π_c. A rare class needs much stronger word evidence.</span></div>
+      <div class="trap"><b>trap 3 · wrong denominator</b><span>θ̂_jc divides by N_c (messages of that class), not by N.</span></div>
+      <div class="trap"><b>trap 4 · normalising too early</b><span>Compute both scores first, then divide each by their sum.</span></div>
+      <div class="trap"><b>trap 5 · thinking “naive” = wrong</b><span>The assumption is false in reality but the classifier still works well, especially with little data.</span></div>
+      <div class="trap"><b>trap 6 · ignoring zeros</b><span>One θ̂ = 0 or 1 can make a score exactly 0. Part 2 fixes it with priors.</span></div>
+    </div>
+    <div class="faqgrid">
+      <div class="polaroid" aria-hidden="true"><div class="img">p(c|x)</div><span class="cap">explain it back</span></div>
+      <div class="faq">
+        <details><summary>what does “naive” mean in naive Bayes?</summary><div class="a"><p>The features are assumed independent given the class, so p(x | c) = Π p(x_j | c).</p></div></details>
+        <details><summary>why is it called a generative classifier?</summary><div class="a"><p>It models how each class generates the data, p(x | c) and p(c), and then uses Bayes' rule to get p(c | x).</p></div></details>
+        <details><summary>how do you fit a Bernoulli naive Bayes?</summary><div class="a"><p>Count: π̂_c = N_c/N and θ̂_jc = N_jc/N_c. These are the MLEs.</p></div></details>
+        <details><summary>how do you classify a new message?</summary><div class="a"><p>For each class multiply π_c by θ_jc for present words and 1 − θ_jc for missing words; pick the largest; divide by the sum for probabilities.</p></div></details>
+        <details><summary>why use logs, and when do you need log-sum-exp?</summary><div class="a"><p>Products of many small numbers underflow. Logs turn them into sums. Log-sum-exp is only needed for normalised probabilities; for the arg max, compare log scores directly.</p></div></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section class="panel center" id="practice">
+    <h2>practice problems</h2>
+    <p class="sub">paper first, then hint, then solution</p>
+    <div class="probs">
+      <article class="prob"><div class="ptop"><span class="pn">01</span><span class="lvl l1">easy</span></div><h3>parameters to count</h3><p>A Bernoulli NBC with D = 20 words and C = 3 classes. How many parameters does it have? How many would a full model of p(x | c) need?</p>
+        <details><summary>hint</summary><div class="a"><p>NBC: one θ per word and class, plus the class prior. Full: a probability for every vector in {0,1}<sup>D</sup>.</p></div></details>
+        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>NBC: C·D = 60 values θ_jc, plus C − 1 = 2 for π: 62</li><li>Full: C(2<sup>D</sup> − 1) = 3 · 1 048 575 ≈ 3.1 million (Week 6, Q1)</li></ul></div></details></article>
+      <article class="prob"><div class="ptop"><span class="pn">02</span><span class="lvl l1">easy</span></div><h3>fit by counting</h3><p>Add two new messages to our data: “noob” (toxic) and “gg” (friendly). Recompute π̂ and θ̂ for the word noob in both classes.</p>
+        <details><summary>hint</summary><div class="a"><p>N_T = 5, N_F = 7, N = 12.</p></div></details>
+        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>π̂_T = 5/12, π̂_F = 7/12</li><li>θ̂_noob,T = 4/5 = 0.8; θ̂_noob,F = 0/7 = 0</li></ul></div></details></article>
+      <article class="prob"><div class="ptop"><span class="pn">03</span><span class="lvl l2">medium</span></div><h3>classify “ez noob gg”</h3><p>Using the table from this lecture, compute both scores and p(toxic | x) for x = (1, 1, 1, 0).</p>
+        <details><summary>hint</summary><div class="a"><p>Friendly has θ_noob = 0.</p></div></details>
+        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>T: 0.4 · 0.75 · 0.75 · 0.5 · 1 = 0.1125</li><li>F: 0.6 · (1/6) · 0 · … = 0</li><li>p(T | x) = 1: certain only because of a zero count</li></ul></div></details></article>
+      <article class="prob"><div class="ptop"><span class="pn">04</span><span class="lvl l2">medium</span></div><h3>prior beats evidence</h3><p>Two classes, π_T = 0.1, π_F = 0.9. One word: θ_T = 0.5, θ_F = 0.125. The word appears. Which class wins? (Week 5, Q2 idea)</p>
+        <details><summary>hint</summary><div class="a"><p>Compare 0.1 · 0.5 with 0.9 · 0.125.</p></div></details>
+        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>T: 0.05; F: 0.1125</li><li>p(T | x) = 0.05/0.1625 ≈ 0.31 → friendly, although the word is 4× more common in toxic chat</li></ul></div></details></article>
+      <article class="prob"><div class="ptop"><span class="pn">05</span><span class="lvl l3">exam-style</span></div><h3>pass or fail, the original numbers</h3><p>D = {(F,1,1), (F,0,0), (P,1,1), (P,1,0), (F,0,1), (F,1,0), (P,1,1)} with features (attended, homework). Fit the MLE NBC and classify (1, 1).</p>
+        <details><summary>hint</summary><div class="a"><p>Same numbers as the Dota exam box, with P = W.</p></div></details>
+        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>π̂_P = 3/7, θ̂_att,P = 1, θ̂_hw,P = 2/3; π̂_F = 4/7, θ̂_att,F = θ̂_hw,F = 1/2</li><li>P: 3/7 · 1 · 2/3 = 2/7 ≈ 0.286; F: 4/7 · 1/2 · 1/2 = 1/7 ≈ 0.143</li><li>p(P | x) = 2/3 → pass</li></ul></div></details></article>
+      <article class="prob"><div class="ptop"><span class="pn">06</span><span class="lvl l4">challenge</span></div><h3>log-sum-exp by hand</h3><p>Log scores b_T = −300, b_F = −302. Compute log p(T | x) and p(T | x) without underflow.</p>
+        <details><summary>hint</summary><div class="a"><p>B = −300.</p></div></details>
+        <details><summary>solution</summary><div class="a"><ul class="steps-l"><li>log Σ = −300 + log(1 + e<sup>−2</sup>) = −300 + log 1.1353 ≈ −299.873</li><li>log p(T | x) = −300 − (−299.873) ≈ −0.127 → p ≈ 0.88</li></ul></div></details></article>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="who"><i>🧠</i><div><b>naivebayes · lecture 5</b>statistical learning · dota 2 examples, made-up numbers</div></div>
+    <div><b>navigation</b><a href="#how">format</a><a href="#fit">fitting</a><a href="#predict">predicting</a><a href="#practice">practice</a></div>
+    <div><b>next</b><a href="https://stellasdeutsch-dev.github.io/naive-bayes-2/">part 2: zero counts, priors, mutual information</a></div>
+    <div><b>earlier lectures</b><a href="https://stellasdeutsch-dev.github.io/coin-to-die/">4 · dirichlet</a><a href="https://stellasdeutsch-dev.github.io/prior-plus-data/">3 · beta-binomial</a><a href="https://stellasdeutsch-dev.github.io/maxlike/">2 · mle</a></div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const WORDS=["ez","noob","gg","wp"];
+  const DATA=[
+    ["ez noob","T"],["noob team gg","T"],["ez","T"],["gg ez noob","T"],
+    ["gg wp","F"],["wp all","F"],["gg","F"],["gg wp team","F"],["gg wp ez game","F"],["gg wp guys","F"]
+  ];
+  const vec=s=>{const t=new Set(s.toLowerCase().match(/[a-z]+/g)||[]);return WORDS.map(w=>t.has(w)?1:0)};
+  const AV=["#ef5350","#ff8a65","#ab47bc","#ec407a","#26a69a","#42a5f5","#66bb6a","#29b6f6","#9ccc65","#5c6bc0"];
+  document.getElementById("reviews").innerHTML=DATA.map((d,i)=>`<div class="rev"><p>“${d[0]}”</p><span class="vec">x = (${vec(d[0]).join(", ")})</span><div class="who"><span class="av" style="background:${AV[i]}">${i+1}</span><span class="badge ${d[1]==="T"?"t":"f"}">${d[1]==="T"?"toxic":"friendly"}</span><span class="q">”</span></div></div>`).join("");
+  // fit MLE
+  const cls={T:DATA.filter(d=>d[1]==="T").map(d=>vec(d[0])),F:DATA.filter(d=>d[1]==="F").map(d=>vec(d[0]))};
+  const N=DATA.length, pi={}, th={};
+  for(const c in cls){pi[c]=cls[c].length/N;th[c]=WORDS.map((w,j)=>cls[c].reduce((a,r)=>a+r[j],0)/cls[c].length)}
+  const f=v=>v===0?"0":(v<0.001?v.toExponential(2):v.toFixed(4));
+  function classify(e){
+    if(e)e.preventDefault();
+    const x=vec(document.getElementById("msg").value);
+    const s={};
+    for(const c in pi){s[c]=pi[c]*x.reduce((a,xj,j)=>a*(xj?th[c][j]:1-th[c][j]),1)}
+    const tot=s.T+s.F, el=document.getElementById("res");
+    const xs=`x = (${x.join(", ")})`;
+    if(tot===0){el.innerHTML=`${xs}: toxic score <b>0</b>, friendly score <b>0</b>. <b class="t">0/0: the counting classifier cannot decide.</b> Part 2 fixes this with priors.`;return}
+    const pT=s.T/tot;
+    el.innerHTML=`${xs} · toxic score ${f(s.T)} · friendly score ${f(s.F)} → <b class="${pT>=0.5?"t":"f"}">${pT>=0.5?"toxic":"friendly"} (${Math.round(100*Math.max(pT,1-pT))}%)</b>${(pT===0||pT===1)?" — certain only because of a zero count":""}`;
+  }
+  document.getElementById("clsForm").addEventListener("submit",classify);
+  classify();
+})();
+</script>
+</body>
+</html>
